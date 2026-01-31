@@ -5,8 +5,8 @@
 use std::pin::Pin;
 
 use async_trait::async_trait;
-use futures::stream;
 use futures::Stream;
+use futures::stream;
 
 use kanata_types::error::KanataError;
 use kanata_types::session::{AgentEvent, AgentSession, SessionTokenStats};

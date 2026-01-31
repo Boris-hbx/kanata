@@ -7,7 +7,7 @@ use std::pin::Pin;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use async_trait::async_trait;
-use futures::{stream, Stream, StreamExt};
+use futures::{Stream, StreamExt, stream};
 
 use kanata_core::Agent;
 use kanata_types::error::KanataError;
@@ -128,15 +128,10 @@ impl LLMClient for InfiniteToolLLM {
     ) -> Result<Pin<Box<dyn Stream<Item = Result<StreamEvent, KanataError>> + Send>>, KanataError>
     {
         Ok(Box::pin(stream::iter(vec![
-            Ok(StreamEvent::ToolUseStart {
-                id: "inf".into(),
-                name: "echo".into(),
-            }),
+            Ok(StreamEvent::ToolUseStart { id: "inf".into(), name: "echo".into() }),
             Ok(StreamEvent::ToolUseDelta(r#"{"text":"hi"}"#.into())),
             Ok(StreamEvent::ToolUseEnd),
-            Ok(StreamEvent::MessageEnd {
-                usage: TokenUsage::default(),
-            }),
+            Ok(StreamEvent::MessageEnd { usage: TokenUsage::default() }),
         ])))
     }
 
@@ -163,14 +158,8 @@ impl Tool for EchoTool {
     }
 
     async fn execute(&self, input: serde_json::Value) -> Result<ToolResult, KanataError> {
-        let text = input
-            .get("text")
-            .and_then(|v| v.as_str())
-            .unwrap_or("(empty)");
-        Ok(ToolResult {
-            content: text.to_string(),
-            is_error: false,
-        })
+        let text = input.get("text").and_then(|v| v.as_str()).unwrap_or("(empty)");
+        Ok(ToolResult { content: text.to_string(), is_error: false })
     }
 }
 
@@ -221,16 +210,12 @@ async fn test_tool_use_round_trip() {
     let events: Vec<_> = stream.collect().await;
 
     // Should contain ToolStart and ToolEnd events.
-    assert!(events
-        .iter()
-        .any(|e| matches!(e, AgentEvent::ToolStart { name, .. } if name == "echo")));
-    assert!(events
-        .iter()
-        .any(|e| matches!(e, AgentEvent::ToolEnd { name, .. } if name == "echo")));
+    assert!(
+        events.iter().any(|e| matches!(e, AgentEvent::ToolStart { name, .. } if name == "echo"))
+    );
+    assert!(events.iter().any(|e| matches!(e, AgentEvent::ToolEnd { name, .. } if name == "echo")));
     // Should also have the follow-up text.
-    assert!(events
-        .iter()
-        .any(|e| matches!(e, AgentEvent::TextDelta(t) if t.contains("Done"))));
+    assert!(events.iter().any(|e| matches!(e, AgentEvent::TextDelta(t) if t.contains("Done"))));
 }
 
 /// Unknown tool returns an error result but doesn't crash the agent.
@@ -261,15 +246,14 @@ async fn test_depth_limit_prevents_infinite_loop() {
     let events: Vec<_> = stream.collect().await;
 
     // Should hit the max depth error.
-    assert!(events
-        .iter()
-        .any(|e| matches!(e, AgentEvent::Error(msg) if msg.contains("maximum tool recursion"))));
+    assert!(
+        events
+            .iter()
+            .any(|e| matches!(e, AgentEvent::Error(msg) if msg.contains("maximum tool recursion")))
+    );
 
     // Count ToolStart events — should be exactly MAX_TOOL_TURNS (20).
-    let tool_starts = events
-        .iter()
-        .filter(|e| matches!(e, AgentEvent::ToolStart { .. }))
-        .count();
+    let tool_starts = events.iter().filter(|e| matches!(e, AgentEvent::ToolStart { .. })).count();
     assert_eq!(tool_starts, 20);
 }
 

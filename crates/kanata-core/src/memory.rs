@@ -37,10 +37,8 @@ impl ProjectMemory {
     ///
     /// Returns an error if no path is set, or serialization/writing fails.
     pub fn save(&self) -> Result<(), String> {
-        let path = self
-            .path
-            .as_ref()
-            .ok_or_else(|| "No path set for project memory".to_string())?;
+        let path =
+            self.path.as_ref().ok_or_else(|| "No path set for project memory".to_string())?;
 
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)

@@ -18,8 +18,8 @@ use kanata_types::skill::SkillDefinition;
 ///
 /// Returns an error if the file cannot be read or parsed as valid YAML.
 pub fn load_skill_from_yaml(path: &Path) -> Result<SkillDefinition, String> {
-    let content =
-        std::fs::read_to_string(path).map_err(|e| format!("Failed to read {}: {e}", path.display()))?;
+    let content = std::fs::read_to_string(path)
+        .map_err(|e| format!("Failed to read {}: {e}", path.display()))?;
     serde_yaml::from_str(&content)
         .map_err(|e| format!("Failed to parse YAML {}: {e}", path.display()))
 }
@@ -41,11 +41,7 @@ pub fn load_skills_from_dir(dir: &Path) -> Result<Vec<SkillDefinition>, String> 
     for entry in entries {
         let entry = entry.map_err(|e| format!("Failed to read entry: {e}"))?;
         let path = entry.path();
-        if path
-            .file_name()
-            .and_then(|n| n.to_str())
-            .is_some_and(|n| n.ends_with(".skill.yaml"))
-        {
+        if path.file_name().and_then(|n| n.to_str()).is_some_and(|n| n.ends_with(".skill.yaml")) {
             let skill = load_skill_from_yaml(&path)?;
             tracing::info!(name = %skill.name, "Loaded skill");
             skills.push(skill);

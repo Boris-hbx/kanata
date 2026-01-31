@@ -30,9 +30,7 @@ fn compiled_patterns() -> &'static Vec<(Regex, &'static str)> {
     COMPILED_PATTERNS.get_or_init(|| {
         DANGEROUS_PATTERNS
             .iter()
-            .filter_map(|(pattern, desc)| {
-                Regex::new(pattern).ok().map(|re| (re, *desc))
-            })
+            .filter_map(|(pattern, desc)| Regex::new(pattern).ok().map(|re| (re, *desc)))
             .collect()
     })
 }
@@ -58,9 +56,7 @@ pub fn is_path_allowed(path: &str, allowed_roots: &[&str]) -> bool {
         return true;
     }
     let normalized = path.replace('\\', "/");
-    allowed_roots
-        .iter()
-        .any(|root| normalized.starts_with(&root.replace('\\', "/")))
+    allowed_roots.iter().any(|root| normalized.starts_with(&root.replace('\\', "/")))
 }
 
 #[cfg(test)]

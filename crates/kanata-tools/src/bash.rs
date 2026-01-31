@@ -57,13 +57,12 @@ impl Tool for BashTool {
     ///
     /// Returns `KanataError` if the command parameter is missing or execution fails.
     async fn execute(&self, input: serde_json::Value) -> Result<ToolResult, KanataError> {
-        let command = input
-            .get("command")
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| KanataError::ToolError {
+        let command = input.get("command").and_then(|v| v.as_str()).ok_or_else(|| {
+            KanataError::ToolError {
                 tool_name: "Bash".to_string(),
                 reason: "Missing required parameter: command".to_string(),
-            })?;
+            }
+        })?;
 
         let timeout_secs = input
             .get("timeout")
@@ -73,25 +72,15 @@ impl Tool for BashTool {
 
         // Safety check.
         if let Some(reason) = safety::check_dangerous_command(command) {
-            return Ok(ToolResult {
-                content: reason,
-                is_error: true,
-            });
+            return Ok(ToolResult { content: reason, is_error: true });
         }
 
         // Execute the command.
-        let shell = if cfg!(target_os = "windows") {
-            ("cmd", "/C")
-        } else {
-            ("sh", "-c")
-        };
+        let shell = if cfg!(target_os = "windows") { ("cmd", "/C") } else { ("sh", "-c") };
 
         let result = tokio::time::timeout(
             std::time::Duration::from_secs(timeout_secs),
-            tokio::process::Command::new(shell.0)
-                .arg(shell.1)
-                .arg(command)
-                .output(),
+            tokio::process::Command::new(shell.0).arg(shell.1).arg(command).output(),
         )
         .await;
 
@@ -131,10 +120,7 @@ impl Tool for BashTool {
                     };
                 }
 
-                Ok(ToolResult {
-                    content: combined,
-                    is_error,
-                })
+                Ok(ToolResult { content: combined, is_error })
             }
             Ok(Err(e)) => Err(KanataError::ToolError {
                 tool_name: "Bash".to_string(),
@@ -155,10 +141,7 @@ mod tests {
     #[tokio::test]
     async fn test_bash_echo() {
         let tool = BashTool::new();
-        let result = tool
-            .execute(json!({ "command": "echo hello" }))
-            .await
-            .unwrap();
+        let result = tool.execute(json!({ "command": "echo hello" })).await.unwrap();
         assert!(!result.is_error);
         assert!(result.content.contains("hello"));
     }
@@ -166,10 +149,7 @@ mod tests {
     #[tokio::test]
     async fn test_bash_blocks_dangerous_command() {
         let tool = BashTool::new();
-        let result = tool
-            .execute(json!({ "command": "rm -rf /" }))
-            .await
-            .unwrap();
+        let result = tool.execute(json!({ "command": "rm -rf /" })).await.unwrap();
         assert!(result.is_error);
         assert!(result.content.contains("Blocked"));
     }
@@ -177,15 +157,8 @@ mod tests {
     #[tokio::test]
     async fn test_bash_timeout() {
         let tool = BashTool::new();
-        let cmd = if cfg!(target_os = "windows") {
-            "ping -n 10 127.0.0.1"
-        } else {
-            "sleep 10"
-        };
-        let result = tool
-            .execute(json!({ "command": cmd, "timeout": 1 }))
-            .await
-            .unwrap();
+        let cmd = if cfg!(target_os = "windows") { "ping -n 10 127.0.0.1" } else { "sleep 10" };
+        let result = tool.execute(json!({ "command": cmd, "timeout": 1 })).await.unwrap();
         assert!(result.is_error);
         assert!(result.content.contains("timed out"));
     }

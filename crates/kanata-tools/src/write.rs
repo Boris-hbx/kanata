@@ -49,20 +49,17 @@ impl Tool for WriteTool {
     ///
     /// Returns `KanataError` if parameters are missing or the file cannot be written.
     async fn execute(&self, input: serde_json::Value) -> Result<ToolResult, KanataError> {
-        let path = input
-            .get("path")
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| KanataError::ToolError {
+        let path =
+            input.get("path").and_then(|v| v.as_str()).ok_or_else(|| KanataError::ToolError {
                 tool_name: "Write".to_string(),
                 reason: "Missing required parameter: path".to_string(),
             })?;
-        let content = input
-            .get("content")
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| KanataError::ToolError {
+        let content = input.get("content").and_then(|v| v.as_str()).ok_or_else(|| {
+            KanataError::ToolError {
                 tool_name: "Write".to_string(),
                 reason: "Missing required parameter: content".to_string(),
-            })?;
+            }
+        })?;
 
         // Create parent directories if they don't exist.
         if let Some(parent) = std::path::Path::new(path).parent() {
@@ -118,10 +115,8 @@ mod tests {
             .expect("write nested");
         assert!(!result.is_error);
 
-        let _ = tokio::fs::remove_dir_all(
-            std::env::temp_dir().join("kanata_test_write_nested"),
-        )
-        .await;
+        let _ =
+            tokio::fs::remove_dir_all(std::env::temp_dir().join("kanata_test_write_nested")).await;
     }
 
     #[tokio::test]

@@ -60,19 +60,13 @@ impl Tool for EditTool {
         let path = require_str(&input, "path", "Edit")?;
         let old_string = require_str(&input, "old_string", "Edit")?;
         let new_string = require_str(&input, "new_string", "Edit")?;
-        let replace_all = input
-            .get("replace_all")
-            .and_then(serde_json::Value::as_bool)
-            .unwrap_or(false);
+        let replace_all =
+            input.get("replace_all").and_then(serde_json::Value::as_bool).unwrap_or(false);
 
-        let content = tokio::fs::read_to_string(path)
-            .await
-            .map_err(|e| match e.kind() {
-                std::io::ErrorKind::NotFound => KanataError::FileNotFound {
-                    path: path.to_string(),
-                },
-                _ => KanataError::Io(e),
-            })?;
+        let content = tokio::fs::read_to_string(path).await.map_err(|e| match e.kind() {
+            std::io::ErrorKind::NotFound => KanataError::FileNotFound { path: path.to_string() },
+            _ => KanataError::Io(e),
+        })?;
 
         let count = content.matches(old_string).count();
         if count == 0 {
@@ -114,13 +108,10 @@ fn require_str<'a>(
     key: &str,
     tool_name: &str,
 ) -> Result<&'a str, KanataError> {
-    input
-        .get(key)
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| KanataError::ToolError {
-            tool_name: tool_name.to_string(),
-            reason: format!("Missing required parameter: {key}"),
-        })
+    input.get(key).and_then(|v| v.as_str()).ok_or_else(|| KanataError::ToolError {
+        tool_name: tool_name.to_string(),
+        reason: format!("Missing required parameter: {key}"),
+    })
 }
 
 #[cfg(test)]

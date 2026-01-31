@@ -6,13 +6,13 @@
 use std::pin::Pin;
 
 use async_trait::async_trait;
-use futures::stream;
 use futures::Stream;
+use futures::stream;
 
+use kanata_types::KanataError;
 use kanata_types::llm::{LLMClient, StreamEvent, TokenUsage};
 use kanata_types::message::Message;
 use kanata_types::tool::ToolDefinition;
-use kanata_types::KanataError;
 
 /// A mock LLM client that returns a canned text response.
 pub struct MockLLMClient {
@@ -32,10 +32,7 @@ impl MockLLMClient {
 
     /// Creates a mock client that returns the given text.
     pub fn with_response(response_text: impl Into<String>) -> Self {
-        Self {
-            model: "mock-model".to_string(),
-            response_text: response_text.into(),
-        }
+        Self { model: "mock-model".to_string(), response_text: response_text.into() }
     }
 }
 
@@ -106,16 +103,12 @@ impl LLMClient for MockToolUseLLMClient {
         _system: &str,
     ) -> Result<Pin<Box<dyn Stream<Item = Result<StreamEvent, KanataError>> + Send>>, KanataError>
     {
-        let already_called = self
-            .returned_tool
-            .swap(true, std::sync::atomic::Ordering::SeqCst);
+        let already_called = self.returned_tool.swap(true, std::sync::atomic::Ordering::SeqCst);
 
         let events = if already_called {
             // Second call: return final text after tool result
             vec![
-                Ok(StreamEvent::TextDelta(
-                    "Done! I used the tool successfully.".to_string(),
-                )),
+                Ok(StreamEvent::TextDelta("Done! I used the tool successfully.".to_string())),
                 Ok(StreamEvent::MessageEnd {
                     usage: TokenUsage {
                         input_tokens: 30,
@@ -162,12 +155,8 @@ mod tests {
     async fn test_mock_llm_returns_text_delta() {
         let client = MockLLMClient::new();
         let stream = client.chat_stream(&[], &[], "").await.expect("stream");
-        let events: Vec<_> = stream
-            .collect::<Vec<_>>()
-            .await
-            .into_iter()
-            .filter_map(Result::ok)
-            .collect();
+        let events: Vec<_> =
+            stream.collect::<Vec<_>>().await.into_iter().filter_map(Result::ok).collect();
         assert_eq!(events.len(), 2);
         assert!(matches!(&events[0], StreamEvent::TextDelta(_)));
         assert!(matches!(&events[1], StreamEvent::MessageEnd { .. }));
@@ -175,8 +164,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_mock_tool_use_client_returns_tool_then_text() {
-        let client =
-            MockToolUseLLMClient::new("Read", r#"{"path":"/tmp/test.rs"}"#);
+        let client = MockToolUseLLMClient::new("Read", r#"{"path":"/tmp/test.rs"}"#);
 
         // First call: tool use
         let events: Vec<_> = client

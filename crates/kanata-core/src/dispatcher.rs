@@ -13,10 +13,7 @@ pub struct ToolDispatcher {
 impl ToolDispatcher {
     /// Creates a dispatcher from a list of tools.
     pub fn new(tools: Vec<Box<dyn Tool>>) -> Self {
-        let map = tools
-            .into_iter()
-            .map(|t| (t.definition().name.clone(), t))
-            .collect();
+        let map = tools.into_iter().map(|t| (t.definition().name.clone(), t)).collect();
         Self { tools: map }
     }
 
@@ -73,20 +70,14 @@ mod tests {
         }
 
         async fn execute(&self, input: serde_json::Value) -> Result<ToolResult, KanataError> {
-            Ok(ToolResult {
-                content: input.to_string(),
-                is_error: false,
-            })
+            Ok(ToolResult { content: input.to_string(), is_error: false })
         }
     }
 
     #[tokio::test]
     async fn test_dispatcher_dispatches_tool() {
         let dispatcher = ToolDispatcher::new(vec![Box::new(EchoTool)]);
-        let result = dispatcher
-            .dispatch("Echo", json!({"msg": "hi"}))
-            .await
-            .unwrap();
+        let result = dispatcher.dispatch("Echo", json!({"msg": "hi"})).await.unwrap();
         assert!(!result.is_error);
         assert!(result.content.contains("hi"));
     }

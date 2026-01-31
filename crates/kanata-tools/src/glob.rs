@@ -52,17 +52,13 @@ impl Tool for GlobTool {
     ///
     /// Returns `KanataError` if the pattern parameter is missing or the glob is invalid.
     async fn execute(&self, input: serde_json::Value) -> Result<ToolResult, KanataError> {
-        let pattern = input
-            .get("pattern")
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| KanataError::ToolError {
+        let pattern = input.get("pattern").and_then(|v| v.as_str()).ok_or_else(|| {
+            KanataError::ToolError {
                 tool_name: "Glob".to_string(),
                 reason: "Missing required parameter: pattern".to_string(),
-            })?;
-        let search_path = input
-            .get("path")
-            .and_then(|v| v.as_str())
-            .unwrap_or(".");
+            }
+        })?;
+        let search_path = input.get("path").and_then(|v| v.as_str()).unwrap_or(".");
 
         let glob = globset::GlobBuilder::new(pattern)
             .literal_separator(false)
@@ -76,15 +72,8 @@ impl Tool for GlobTool {
         let base = Path::new(search_path);
         let mut matches = Vec::new();
 
-        for entry in WalkDir::new(base)
-            .follow_links(false)
-            .into_iter()
-            .filter_map(Result::ok)
-        {
-            let rel = entry
-                .path()
-                .strip_prefix(base)
-                .unwrap_or(entry.path());
+        for entry in WalkDir::new(base).follow_links(false).into_iter().filter_map(Result::ok) {
+            let rel = entry.path().strip_prefix(base).unwrap_or(entry.path());
             if glob.is_match(rel) {
                 matches.push(entry.path().to_string_lossy().to_string());
             }
@@ -98,10 +87,7 @@ impl Tool for GlobTool {
                 is_error: false,
             })
         } else {
-            Ok(ToolResult {
-                content: matches.join("\n"),
-                is_error: false,
-            })
+            Ok(ToolResult { content: matches.join("\n"), is_error: false })
         }
     }
 }

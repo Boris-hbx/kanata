@@ -60,17 +60,13 @@ impl Tool for GrepTool {
     ///
     /// Returns `KanataError` if the pattern parameter is missing or the regex/glob is invalid.
     async fn execute(&self, input: serde_json::Value) -> Result<ToolResult, KanataError> {
-        let pattern_str = input
-            .get("pattern")
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| KanataError::ToolError {
+        let pattern_str = input.get("pattern").and_then(|v| v.as_str()).ok_or_else(|| {
+            KanataError::ToolError {
                 tool_name: "Grep".to_string(),
                 reason: "Missing required parameter: pattern".to_string(),
-            })?;
-        let search_path = input
-            .get("path")
-            .and_then(|v| v.as_str())
-            .unwrap_or(".");
+            }
+        })?;
+        let search_path = input.get("path").and_then(|v| v.as_str()).unwrap_or(".");
         let file_glob = input.get("glob").and_then(|v| v.as_str());
 
         let re = Regex::new(pattern_str).map_err(|e| KanataError::ToolError {
@@ -121,10 +117,7 @@ impl Tool for GrepTool {
                     if results.len() >= MAX_RESULTS {
                         results.push(format!("... (truncated at {MAX_RESULTS} matches)"));
                         let output = results.join("\n");
-                        return Ok(ToolResult {
-                            content: output,
-                            is_error: false,
-                        });
+                        return Ok(ToolResult { content: output, is_error: false });
                     }
                 }
             }
@@ -136,10 +129,7 @@ impl Tool for GrepTool {
                 is_error: false,
             })
         } else {
-            Ok(ToolResult {
-                content: results.join("\n"),
-                is_error: false,
-            })
+            Ok(ToolResult { content: results.join("\n"), is_error: false })
         }
     }
 }

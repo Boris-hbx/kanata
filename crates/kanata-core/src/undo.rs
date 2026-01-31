@@ -26,9 +26,7 @@ pub struct UndoManager {
 impl UndoManager {
     /// Creates a new empty undo manager.
     pub fn new() -> Self {
-        Self {
-            stack: VecDeque::new(),
-        }
+        Self { stack: VecDeque::new() }
     }
 
     /// Records a file's state before modification. Call this before writing.
@@ -56,10 +54,7 @@ impl UndoManager {
     ///
     /// Returns an error if the undo stack is empty or the file operation fails.
     pub fn undo(&mut self) -> Result<String, String> {
-        let entry = self
-            .stack
-            .pop_back()
-            .ok_or_else(|| "Nothing to undo".to_string())?;
+        let entry = self.stack.pop_back().ok_or_else(|| "Nothing to undo".to_string())?;
 
         if let Some(content) = &entry.previous_content {
             std::fs::write(&entry.path, content)
@@ -71,11 +66,7 @@ impl UndoManager {
                 std::fs::remove_file(&entry.path)
                     .map_err(|e| format!("Failed to remove {}: {e}", entry.path.display()))?;
             }
-            Ok(format!(
-                "Undone: {} (removed {})",
-                entry.description,
-                entry.path.display()
-            ))
+            Ok(format!("Undone: {} (removed {})", entry.description, entry.path.display()))
         }
     }
 

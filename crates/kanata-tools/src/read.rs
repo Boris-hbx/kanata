@@ -45,23 +45,16 @@ impl Tool for ReadTool {
     ///
     /// Returns `KanataError` if the path parameter is missing or the file cannot be read.
     async fn execute(&self, input: serde_json::Value) -> Result<ToolResult, KanataError> {
-        let path = input
-            .get("path")
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| KanataError::ToolError {
+        let path =
+            input.get("path").and_then(|v| v.as_str()).ok_or_else(|| KanataError::ToolError {
                 tool_name: "Read".to_string(),
                 reason: "Missing required parameter: path".to_string(),
             })?;
 
         match tokio::fs::read_to_string(path).await {
-            Ok(content) => Ok(ToolResult {
-                content,
-                is_error: false,
-            }),
+            Ok(content) => Ok(ToolResult { content, is_error: false }),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-                Err(KanataError::FileNotFound {
-                    path: path.to_string(),
-                })
+                Err(KanataError::FileNotFound { path: path.to_string() })
             }
             Err(e) => Err(KanataError::Io(e)),
         }
@@ -77,15 +70,10 @@ mod tests {
         let dir = std::env::temp_dir().join("kanata_test_read");
         let _ = tokio::fs::create_dir_all(&dir).await;
         let file = dir.join("hello.txt");
-        tokio::fs::write(&file, "hello world")
-            .await
-            .expect("write");
+        tokio::fs::write(&file, "hello world").await.expect("write");
 
         let tool = ReadTool::new();
-        let result = tool
-            .execute(json!({ "path": file.to_str().unwrap() }))
-            .await
-            .expect("read");
+        let result = tool.execute(json!({ "path": file.to_str().unwrap() })).await.expect("read");
         assert!(!result.is_error);
         assert_eq!(result.content, "hello world");
 
@@ -95,9 +83,7 @@ mod tests {
     #[tokio::test]
     async fn test_read_missing_file_returns_error() {
         let tool = ReadTool::new();
-        let result = tool
-            .execute(json!({ "path": "/nonexistent/path/to/file.txt" }))
-            .await;
+        let result = tool.execute(json!({ "path": "/nonexistent/path/to/file.txt" })).await;
         assert!(result.is_err());
     }
 

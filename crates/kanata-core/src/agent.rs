@@ -85,10 +85,8 @@ impl Agent {
             .map_err(|e| KanataError::Config(format!("Lock poisoned: {e}")))?
             .clone();
 
-        let mut llm_stream = self
-            .llm
-            .chat_stream(&messages, &tool_defs, &self.system_prompt)
-            .await?;
+        let mut llm_stream =
+            self.llm.chat_stream(&messages, &tool_defs, &self.system_prompt).await?;
 
         let mut text_accum = String::new();
         let mut current_tool_name = String::new();
@@ -132,10 +130,7 @@ impl Agent {
         if assistant_content != serde_json::Value::Null
             && let Ok(mut msgs) = self.messages.lock()
         {
-            msgs.push(Message {
-                role: Role::Assistant,
-                content: assistant_content,
-            });
+            msgs.push(Message { role: Role::Assistant, content: assistant_content });
         }
 
         if let Some(usage) = &final_usage {
@@ -150,15 +145,11 @@ impl Agent {
                     input_preview: truncate_string(input_json, 100),
                 });
 
-                let input: serde_json::Value =
-                    serde_json::from_str(input_json).unwrap_or_default();
+                let input: serde_json::Value = serde_json::from_str(input_json).unwrap_or_default();
 
                 let result = match self.dispatcher.dispatch(name, input).await {
                     Ok(r) => r,
-                    Err(e) => kanata_types::ToolResult {
-                        content: e.to_string(),
-                        is_error: true,
-                    },
+                    Err(e) => kanata_types::ToolResult { content: e.to_string(), is_error: true },
                 };
 
                 events.push(AgentEvent::ToolEnd {
@@ -215,11 +206,7 @@ fn build_assistant_content(
         }));
     }
 
-    if blocks.is_empty() {
-        serde_json::Value::Null
-    } else {
-        serde_json::Value::Array(blocks)
-    }
+    if blocks.is_empty() { serde_json::Value::Null } else { serde_json::Value::Array(blocks) }
 }
 
 /// Truncates a string to at most `max_len` bytes at a valid UTF-8 boundary,
@@ -267,10 +254,7 @@ impl AgentSession for Agent {
     }
 
     fn stats(&self) -> SessionTokenStats {
-        self.stats
-            .lock()
-            .map(|s| s.clone())
-            .unwrap_or_default()
+        self.stats.lock().map(|s| s.clone()).unwrap_or_default()
     }
 
     async fn execute_command(&self, cmd: &str, _args: &str) -> Result<String, KanataError> {
@@ -297,15 +281,11 @@ mod tests {
             _messages: &[Message],
             _tools: &[ToolDefinition],
             _system: &str,
-        ) -> Result<
-            Pin<Box<dyn Stream<Item = Result<StreamEvent, KanataError>> + Send>>,
-            KanataError,
-        > {
+        ) -> Result<Pin<Box<dyn Stream<Item = Result<StreamEvent, KanataError>> + Send>>, KanataError>
+        {
             let events = vec![
                 Ok(StreamEvent::TextDelta("Hello!".to_string())),
-                Ok(StreamEvent::MessageEnd {
-                    usage: TokenUsage::default(),
-                }),
+                Ok(StreamEvent::MessageEnd { usage: TokenUsage::default() }),
             ];
             Ok(Box::pin(stream::iter(events)))
         }
@@ -368,11 +348,8 @@ mod tests {
 
     #[test]
     fn test_build_assistant_content_with_tool_use() {
-        let tools = vec![(
-            "tool_1".to_string(),
-            "Read".to_string(),
-            r#"{"path":"test.rs"}"#.to_string(),
-        )];
+        let tools =
+            vec![("tool_1".to_string(), "Read".to_string(), r#"{"path":"test.rs"}"#.to_string())];
         let content = build_assistant_content("Let me read that.", &tools);
         let blocks = content.as_array().expect("array");
         assert_eq!(blocks.len(), 2);

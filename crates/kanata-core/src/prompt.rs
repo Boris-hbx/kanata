@@ -15,7 +15,9 @@ You have access to the following tools to interact with the user's codebase. Use
 pub fn load_system_prompt(prompt_dir: Option<&Path>) -> String {
     if let Some(dir) = prompt_dir {
         let system_file = dir.join("system.md");
-        if system_file.exists() && let Ok(content) = std::fs::read_to_string(&system_file) {
+        if system_file.exists()
+            && let Ok(content) = std::fs::read_to_string(&system_file)
+        {
             tracing::info!(path = %system_file.display(), "Loaded custom system prompt");
             return content;
         }

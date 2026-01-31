@@ -12,9 +12,7 @@ pub struct ToolRegistry {
 impl ToolRegistry {
     /// Creates an empty registry.
     pub fn new() -> Self {
-        Self {
-            tools: HashMap::new(),
-        }
+        Self { tools: HashMap::new() }
     }
 
     /// Registers a tool. Replaces any existing tool with the same name.

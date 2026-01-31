@@ -16,10 +16,7 @@ pub struct ContextAssembler {
 impl ContextAssembler {
     /// Creates a new context assembler with the given token limit.
     pub fn new(max_tokens: u32) -> Self {
-        Self {
-            max_tokens,
-            chars_per_token: 4,
-        }
+        Self { max_tokens, chars_per_token: 4 }
     }
 
     /// Estimates the token count for a message.
@@ -98,10 +95,7 @@ mod tests {
     use super::*;
 
     fn make_msg(text: &str) -> Message {
-        Message {
-            role: Role::User,
-            content: serde_json::Value::String(text.to_string()),
-        }
+        Message { role: Role::User, content: serde_json::Value::String(text.to_string()) }
     }
 
     #[test]
