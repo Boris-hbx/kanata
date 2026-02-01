@@ -1,10 +1,22 @@
+#![allow(dead_code)]
+
+use std::io::{self, Stdout, stdout};
+
 use anyhow::Result;
 use clap::Parser;
+use crossterm::event::{DisableMouseCapture, EnableMouseCapture};
+use crossterm::execute;
+use crossterm::terminal::{
+    EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode,
+};
+use ratatui::Terminal;
+use ratatui::backend::CrosstermBackend;
 
 mod app;
 mod commands;
 mod config;
 mod migrate;
+mod onboarding;
 mod session;
 mod ui;
 
@@ -44,8 +56,23 @@ async fn async_main() -> Result<()> {
 
     tracing::info!("Kanata v{} starting", env!("CARGO_PKG_VERSION"));
 
-    // Load configuration.
-    let cfg = config::load_config()?;
+    // Load configuration (with first-run onboarding).
+    let cfg = if config::is_first_run() {
+        match onboarding::run_onboarding() {
+            Ok(cfg) => cfg,
+            Err(e) => {
+                eprintln!("Onboarding failed: {e}. Using defaults.");
+                config::load_config()?
+            }
+        }
+    } else {
+        config::load_config()?
+    };
+
+    // Validate configuration.
+    if let Some(warning) = config::validate_config(&cfg) {
+        eprintln!("Config warning: {warning}");
+    }
 
     // Set working directory if specified.
     if let Some(dir) = &cli.directory {
@@ -62,12 +89,47 @@ async fn async_main() -> Result<()> {
         // Non-interactive single-shot mode.
         session.send_once(&prompt).await?;
     } else {
-        // Interactive REPL mode.
+        // Interactive TUI mode.
+        let mut terminal = setup_terminal()?;
+        install_panic_hook();
+
         let mut application = app::App::new(session);
-        application.run().await?;
+        let result = application.run(&mut terminal).await;
+
+        restore_terminal(&mut terminal)?;
+        result?;
     }
 
     Ok(())
+}
+
+/// Set up the terminal for TUI mode.
+fn setup_terminal() -> Result<Terminal<CrosstermBackend<Stdout>>> {
+    enable_raw_mode()?;
+    let mut stdout = stdout();
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    let backend = CrosstermBackend::new(stdout);
+    let terminal = Terminal::new(backend)?;
+    Ok(terminal)
+}
+
+/// Restore the terminal to its original state.
+fn restore_terminal(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<()> {
+    disable_raw_mode()?;
+    execute!(terminal.backend_mut(), LeaveAlternateScreen, DisableMouseCapture)?;
+    terminal.show_cursor()?;
+    Ok(())
+}
+
+/// Install a panic hook that restores the terminal before printing the panic.
+fn install_panic_hook() {
+    let original_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |panic_info| {
+        // Best-effort terminal restore
+        let _ = disable_raw_mode();
+        let _ = execute!(io::stdout(), LeaveAlternateScreen, DisableMouseCapture);
+        original_hook(panic_info);
+    }));
 }
 
 #[cfg(test)]
@@ -87,20 +149,22 @@ mod tests {
 
     #[test]
     fn test_command_parsing_help() {
-        let output = commands::handle_command("help", "");
-        assert!(output.contains("Available commands"));
+        let result = commands::handle_command("help", "");
+        assert!(
+            matches!(result, commands::CommandResult::Display(text) if text.contains("Available commands"))
+        );
     }
 
     #[test]
     fn test_command_parsing_exit() {
-        let output = commands::handle_command("exit", "");
-        assert_eq!(output, "Goodbye!");
+        let result = commands::handle_command("exit", "");
+        assert_eq!(result, commands::CommandResult::Exit);
     }
 
     #[test]
     fn test_command_parsing_unknown() {
-        let output = commands::handle_command("foobar", "");
-        assert!(output.contains("Unknown command"));
+        let result = commands::handle_command("foobar", "");
+        assert!(matches!(result, commands::CommandResult::Unknown(_)));
     }
 
     #[tokio::test]

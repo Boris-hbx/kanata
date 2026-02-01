@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 /// Animated spinner for indicating in-progress operations.
 ///
 /// Used to show visual feedback while the agent is thinking or a tool
@@ -47,6 +45,11 @@ impl Spinner {
         Some(frame)
     }
 
+    /// Return the current frame character without advancing, or empty string if idle.
+    pub fn current_frame_char(&self) -> &str {
+        if self.active { self.frames[self.current_frame] } else { "" }
+    }
+
     /// Whether the spinner is currently running.
     pub fn is_active(&self) -> bool {
         self.active
@@ -84,5 +87,18 @@ mod tests {
         spinner.stop();
         assert!(!spinner.is_active());
         assert!(spinner.tick().is_none());
+    }
+
+    #[test]
+    fn test_current_frame_char() {
+        let mut spinner = Spinner::new();
+        assert_eq!(spinner.current_frame_char(), "");
+
+        spinner.start("Working...");
+        let frame = spinner.current_frame_char();
+        assert!(!frame.is_empty());
+
+        spinner.stop();
+        assert_eq!(spinner.current_frame_char(), "");
     }
 }
